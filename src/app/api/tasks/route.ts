@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
 
 const VALID_STATUSES = ["todo", "in_progress", "done"];
@@ -15,15 +15,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const board = await prisma.board.findUnique({ where: { id: boardId } });
+    const { data: board } = await supabase
+      .from("Board")
+      .select("id")
+      .eq("id", boardId)
+      .single();
+
     if (!board) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    const tasks = await prisma.task.findMany({
-      where: { boardId },
-      orderBy: { createdAt: "desc" },
-    });
+    const { data: tasks, error } = await supabase
+      .from("Task")
+      .select("*")
+      .eq("boardId", boardId)
+      .order("createdAt", { ascending: false });
+
+    if (error) throw error;
 
     return NextResponse.json(tasks);
   } catch (error) {
@@ -68,21 +76,31 @@ export async function POST(request: Request) {
       );
     }
 
-    const board = await prisma.board.findUnique({ where: { id: boardId } });
+    const { data: board } = await supabase
+      .from("Board")
+      .select("id")
+      .eq("id", boardId)
+      .single();
+
     if (!board) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    const task = await prisma.task.create({
-      data: {
+    const { data: task, error } = await supabase
+      .from("Task")
+      .insert({
         boardId,
         title: title.trim(),
         description: description?.trim() || null,
         status: status || "todo",
         priority: priority || "medium",
-        dueDate: dueDate ? new Date(dueDate) : null,
-      },
-    });
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        updatedAt: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json(task, { status: 201 });
   } catch (error) {

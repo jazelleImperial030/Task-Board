@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 export async function PATCH(request: Request) {
@@ -12,14 +12,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "tasks array is required" }, { status: 400 });
     }
 
-    await prisma.$transaction(
-      tasks.map((t) =>
-        prisma.task.update({
-          where: { id: t.id },
-          data: { status: t.status, order: t.order },
-        })
-      )
-    );
+    // Update each task
+    for (const t of tasks) {
+      const { error } = await supabase
+        .from("Task")
+        .update({ status: t.status, order: t.order, updatedAt: new Date().toISOString() })
+        .eq("id", t.id);
+
+      if (error) throw error;
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

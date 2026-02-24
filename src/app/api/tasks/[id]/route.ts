@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 const VALID_STATUSES = ["todo", "in_progress", "done"];
@@ -12,11 +12,6 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const { title, description, status, priority, dueDate, order } = body;
-
-    const task = await prisma.task.findUnique({ where: { id } });
-    if (!task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
 
     if (title !== undefined && (typeof title !== "string" || title.trim().length === 0)) {
       return NextResponse.json(
@@ -39,18 +34,24 @@ export async function PATCH(
       );
     }
 
-    const updateData: Record<string, unknown> = {};
+    const updateData: Record<string, unknown> = { updatedAt: new Date().toISOString() };
     if (title !== undefined) updateData.title = title.trim();
     if (description !== undefined) updateData.description = description?.trim() || null;
     if (status !== undefined) updateData.status = status;
     if (priority !== undefined) updateData.priority = priority;
-    if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
+    if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate).toISOString() : null;
     if (order !== undefined) updateData.order = order;
 
-    const updated = await prisma.task.update({
-      where: { id },
-      data: updateData,
-    });
+    const { data: updated, error } = await supabase
+      .from("Task")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !updated) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -68,13 +69,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const task = await prisma.task.findUnique({ where: { id } });
 
-    if (!task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
+    const { error } = await supabase
+      .from("Task")
+      .delete()
+      .eq("id", id);
 
-    await prisma.task.delete({ where: { id } });
+    if (error) throw error;
 
     return NextResponse.json({ message: "Task deleted successfully" });
   } catch (error) {

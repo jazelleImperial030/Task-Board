@@ -2,3 +2,9 @@
 [debug] [2026-02-24T04:48:14.528Z] > authorizing via signed-in user (jazelle.osp34@gmail.com)
 [debug] [2026-02-24T05:41:00.454Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
 [debug] [2026-02-24T05:41:00.457Z] > authorizing via signed-in user (jazelle.osp34@gmail.com)
+[debug] [2026-02-24T06:01:32.674Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-02-24T06:01:32.676Z] > authorizing via signed-in user (jazelle.osp34@gmail.com)
+[debug] [2026-02-24T06:03:45.833Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-02-24T06:03:45.836Z] > authorizing via signed-in user (jazelle.osp34@gmail.com)
+[debug] [2026-02-24T06:06:39.134Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-02-24T06:06:39.136Z] > authorizing via signed-in user (jazelle.osp34@gmail.com)

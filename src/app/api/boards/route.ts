@@ -1,13 +1,23 @@
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const boards = await prisma.board.findMany({
-      include: { tasks: true, _count: { select: { tasks: true } } },
-      orderBy: { createdAt: "desc" },
-    });
-    return NextResponse.json(boards);
+    const { data: boards, error } = await supabase
+      .from("Board")
+      .select("*, Task(*)")
+      .order("createdAt", { ascending: false });
+
+    if (error) throw error;
+
+    const result = boards.map((board) => ({
+      ...board,
+      tasks: board.Task,
+      _count: { tasks: board.Task.length },
+      Task: undefined,
+    }));
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Failed to fetch boards:", error);
     return NextResponse.json(
@@ -29,16 +39,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const board = await prisma.board.create({
-      data: {
+    const { data: board, error } = await supabase
+      .from("Board")
+      .insert({
         name: name.trim(),
         description: description?.trim() || null,
         color: color || null,
-      },
-      include: { _count: { select: { tasks: true } } },
-    });
+        updatedAt: new Date().toISOString(),
+      })
+      .select()
+      .single();
 
-    return NextResponse.json(board, { status: 201 });
+    if (error) throw error;
+
+    return NextResponse.json({ ...board, _count: { tasks: 0 } }, { status: 201 });
   } catch (error) {
     console.error("Failed to create board:", error);
     return NextResponse.json(

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -7,19 +7,26 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const board = await prisma.board.findUnique({
-      where: { id },
-      include: {
-        tasks: { orderBy: [{ order: "asc" }, { createdAt: "desc" }] },
-        _count: { select: { tasks: true } },
-      },
-    });
+    const { data: board, error } = await supabase
+      .from("Board")
+      .select("*, Task(*)")
+      .eq("id", id)
+      .single();
 
-    if (!board) {
+    if (error || !board) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    return NextResponse.json(board);
+    const result = {
+      ...board,
+      tasks: board.Task.sort((a: { order: number; createdAt: string }, b: { order: number; createdAt: string }) =>
+        a.order !== b.order ? a.order - b.order : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+      _count: { tasks: board.Task.length },
+      Task: undefined,
+    };
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Failed to fetch board:", error);
     return NextResponse.json(
@@ -38,12 +45,7 @@ export async function PATCH(
     const body = await request.json();
     const { name, description } = body;
 
-    const board = await prisma.board.findUnique({ where: { id } });
-    if (!board) {
-      return NextResponse.json({ error: "Board not found" }, { status: 404 });
-    }
-
-    const updateData: Record<string, unknown> = {};
+    const updateData: Record<string, unknown> = { updatedAt: new Date().toISOString() };
     if (name !== undefined) {
       if (typeof name !== "string" || name.trim().length === 0) {
         return NextResponse.json({ error: "Board name cannot be empty" }, { status: 400 });
@@ -54,16 +56,27 @@ export async function PATCH(
       updateData.description = description?.trim() || null;
     }
 
-    const updated = await prisma.board.update({
-      where: { id },
-      data: updateData,
-      include: {
-        tasks: { orderBy: [{ order: "asc" }, { createdAt: "desc" }] },
-        _count: { select: { tasks: true } },
-      },
-    });
+    const { data: updated, error } = await supabase
+      .from("Board")
+      .update(updateData)
+      .eq("id", id)
+      .select("*, Task(*)")
+      .single();
 
-    return NextResponse.json(updated);
+    if (error || !updated) {
+      return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    }
+
+    const result = {
+      ...updated,
+      tasks: updated.Task.sort((a: { order: number; createdAt: string }, b: { order: number; createdAt: string }) =>
+        a.order !== b.order ? a.order - b.order : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+      _count: { tasks: updated.Task.length },
+      Task: undefined,
+    };
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Failed to update board:", error);
     return NextResponse.json({ error: "Failed to update board" }, { status: 500 });
@@ -76,13 +89,16 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const board = await prisma.board.findUnique({ where: { id } });
 
-    if (!board) {
-      return NextResponse.json({ error: "Board not found" }, { status: 404 });
-    }
+    // Delete tasks first (cascade)
+    await supabase.from("Task").delete().eq("boardId", id);
 
-    await prisma.board.delete({ where: { id } });
+    const { error } = await supabase
+      .from("Board")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
 
     return NextResponse.json({ message: "Board deleted successfully" });
   } catch (error) {
