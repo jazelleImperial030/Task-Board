@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0D1117;
+  --foreground: #E6EDF3;
+  --surface: #161B22;
+  --surface-elevated: #1C2128;
+  --border: #30363D;
+  --accent: #58A6FF;
+  --accent-hover: #79C0FF;
+  --text-muted: #8B949E;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-el: var(--surface-elevated);
+  --color-border-custom: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-muted: var(--text-muted);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #484F58;
+}
+
+select option {
+  background: var(--surface-elevated);
+  color: var(--foreground);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+}
