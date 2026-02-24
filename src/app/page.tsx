@@ -44,8 +44,8 @@ export default function Dashboard() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [mobileTab, setMobileTab] = useState<TaskStatus>("todo");
 
-  // Fetch all boards
-  const fetchBoards = useCallback(async () => {
+  // Fetch all boards (silent = no loading spinner, used for polling)
+  const fetchBoards = useCallback(async (silent = false) => {
     const start = Date.now();
     try {
       const res = await fetch("/api/boards");
@@ -56,19 +56,23 @@ export default function Dashboard() {
     } catch (error) {
       console.error("Failed to fetch boards:", error);
     } finally {
-      const elapsed = Date.now() - start;
-      const remaining = Math.max(600 - elapsed, 0);
-      setTimeout(() => setLoading(false), remaining);
+      if (!silent) {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(600 - elapsed, 0);
+        setTimeout(() => setLoading(false), remaining);
+      }
     }
   }, []);
 
   useEffect(() => {
     fetchBoards();
+    const interval = setInterval(() => fetchBoards(true), 5000);
+    return () => clearInterval(interval);
   }, [fetchBoards]);
 
-  // Fetch single board detail when activeBoard changes
-  const fetchBoardDetail = useCallback(async (boardId: string) => {
-    setBoardLoading(true);
+  // Fetch single board detail (silent = no loading spinner, used for polling)
+  const fetchBoardDetail = useCallback(async (boardId: string, silent = false) => {
+    if (!silent) setBoardLoading(true);
     try {
       const res = await fetch(`/api/boards/${boardId}`);
       if (res.ok) {
@@ -79,19 +83,20 @@ export default function Dashboard() {
     } catch (error) {
       console.error("Failed to fetch board:", error);
     } finally {
-      setBoardLoading(false);
+      if (!silent) setBoardLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (activeBoard) {
-      // Reset filters when switching boards
       setStatusFilter("all");
       setSortField("createdAt");
       setSortDirection("desc");
       setEditTask(null);
       setShowCreateTask(false);
       fetchBoardDetail(activeBoard);
+      const interval = setInterval(() => fetchBoardDetail(activeBoard, true), 5000);
+      return () => clearInterval(interval);
     } else {
       setBoardDetail(null);
       setBoardTasks([]);
@@ -352,6 +357,43 @@ export default function Dashboard() {
     return groups;
   }, [filteredAndSorted]);
 
+  // Export functions (per board)
+  const exportBoardJSON = () => {
+    if (!boardDetail) return;
+    const data = JSON.stringify({ ...boardDetail, tasks: boardTasks }, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${boardDetail.name.replace(/\s+/g, "-").toLowerCase()}-export.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportBoardCSV = () => {
+    if (!boardDetail) return;
+    const rows: string[] = ["Task,Description,Status,Priority,Due Date,Created At"];
+    for (const task of boardTasks) {
+      rows.push(
+        [
+          `"${task.title.replace(/"/g, '""')}"`,
+          `"${(task.description || "").replace(/"/g, '""')}"`,
+          task.status,
+          task.priority,
+          task.dueDate || "",
+          task.createdAt,
+        ].join(",")
+      );
+    }
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${boardDetail.name.replace(/\s+/g, "-").toLowerCase()}-export.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Dashboard aggregates
   const allTasks: Task[] = boards.flatMap((b) => b.tasks ?? []);
   const highCount = allTasks.filter((t) => t.priority === "high").length;
@@ -447,11 +489,24 @@ export default function Dashboard() {
           <>
             <h1 className="text-base font-semibold text-foreground mb-5">Dashboard</h1>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
               <MetricCard label="Total Tasks" value={allTasks.length} color="#8B949E" />
               <StatusCard label="To Do" value={todoCount} icon="circle" />
               <StatusCard label="In Progress" value={inProgressCount} icon="clock" />
               <StatusCard label="Done" value={doneCount} icon="check" />
+              <div className="bg-surface rounded-lg border border-border-custom p-3 flex items-center gap-3">
+                <div className="p-2 rounded-md bg-surface-el">
+                  <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-foreground">
+                    {allTasks.length > 0 ? Math.round((doneCount / allTasks.length) * 100) : 0}%
+                  </p>
+                  <p className="text-[10px] text-muted">Completed</p>
+                </div>
+              </div>
             </div>
 
             <div className="mb-5">
@@ -497,7 +552,27 @@ export default function Dashboard() {
                   />
                 </div>
               </div>
-              <CreateTaskButton onClick={() => setShowCreateTask(true)} />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={exportBoardJSON}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-muted hover:text-foreground bg-surface border border-border-custom rounded-md hover:bg-surface-el transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  JSON
+                </button>
+                <button
+                  onClick={exportBoardCSV}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-muted hover:text-foreground bg-surface border border-border-custom rounded-md hover:bg-surface-el transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  CSV
+                </button>
+                <CreateTaskButton onClick={() => setShowCreateTask(true)} />
+              </div>
             </div>
 
             {/* Stats row */}

@@ -54,6 +54,8 @@ export default function BoardDetailPage() {
 
   useEffect(() => {
     fetchBoard();
+    const interval = setInterval(fetchBoard, 5000);
+    return () => clearInterval(interval);
   }, [fetchBoard]);
 
   const handleCreateTask = async (data: { title: string; description?: string | null; priority: TaskPriority; status: TaskStatus; dueDate?: string | null }) => {

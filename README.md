@@ -1,97 +1,70 @@
 # Task Board System
 
-A Kanban-style task management application built with Next.js, SQLite, and Prisma.
+A Kanban-style task management application built with Next.js and Supabase.
+
+## Requirements
+
+- Node.js 18 or higher
+- npm
+- Supabase account (free tier works)
+
+## Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/jazelleImperial030/Task-Board.git
+   cd Task-Board
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up the database:
+   - Create a project at [supabase.com](https://supabase.com)
+   - Go to your project dashboard and find your **Project URL** and **Anon Key**
+
+4. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Then edit `.env` and add your Supabase credentials:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+   NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+   ```
+
+5. Run the application:
+   ```bash
+   npm run dev
+   ```
+
+6. Open in browser: [http://localhost:3000](http://localhost:3000)
+
+## Deployment (Vercel)
+
+1. Push code to GitHub
+2. Import project in [vercel.com](https://vercel.com)
+3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` as environment variables
+4. Deploy
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16 (App Router), React 19, TypeScript
-- **Styling**: Tailwind CSS 4
-- **Database**: SQLite via Prisma ORM 6
-- **API**: Next.js REST API Routes
+- **Next.js 16** with App Router — full-stack React framework
+- **React 19** — UI library
+- **TypeScript** — type safety
+- **Supabase** — cloud PostgreSQL database
+- **Tailwind CSS 4** — utility-first styling
+- **@hello-pangea/dnd** — drag-and-drop for Kanban columns
+- **Recharts** — priority breakdown chart
 
 ## Features
 
-- **Board Management**: Create, view, and delete boards with custom colors
-- **Task Management**: Full CRUD for tasks with title, description, status, priority, and due date
-- **Kanban View**: Three-column layout (To Do, In Progress, Done) with inline status changes
-- **Filtering & Sorting**: Filter tasks by status; sort by date, priority, title, or due date
-- **Analytics Dashboard**: Task counts, completion percentage, and progress bar
-- **Persistent Storage**: SQLite database — data survives restarts
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm
-
-### Installation
-
-```bash
-# Install dependencies
-npm install
-
-# Set up environment
-cp .env.example .env
-
-# Run database migration and seed
-npx prisma migrate dev
-
-# Start development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Re-seed the Database
-
-```bash
-npx prisma db seed
-```
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/boards` | List all boards with task counts |
-| POST | `/api/boards` | Create a new board |
-| GET | `/api/boards/:id` | Get board with all tasks |
-| DELETE | `/api/boards/:id` | Delete board (cascades to tasks) |
-| GET | `/api/tasks?boardId=X` | Get tasks for a board |
-| POST | `/api/tasks` | Create a new task |
-| PATCH | `/api/tasks/:id` | Update task fields |
-| DELETE | `/api/tasks/:id` | Delete a task |
-
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── layout.tsx            # Root layout
-│   ├── page.tsx              # Dashboard (board list)
-│   ├── globals.css           # Global styles
-│   ├── board/[id]/page.tsx   # Board detail (Kanban view)
-│   └── api/                  # REST API routes
-│       ├── boards/
-│       │   ├── route.ts      # GET all, POST
-│       │   └── [id]/route.ts # GET one, DELETE
-│       └── tasks/
-│           ├── route.ts      # GET by board, POST
-│           └── [id]/route.ts # PATCH, DELETE
-├── components/
-│   ├── AnalyticsBanner.tsx   # Dashboard stats
-│   ├── BoardCard.tsx         # Board card component
-│   ├── CreateBoardModal.tsx  # New board form
-│   ├── CreateTaskForm.tsx    # Inline task creation
-│   ├── DeleteConfirmDialog.tsx # Reusable delete confirmation
-│   ├── EditTaskModal.tsx     # Task edit form
-│   ├── EmptyState.tsx        # Empty state placeholder
-│   ├── TaskCard.tsx          # Task card with actions
-│   ├── TaskColumn.tsx        # Kanban column
-│   └── TaskFilters.tsx       # Filter and sort controls
-├── lib/prisma.ts             # Prisma client singleton
-└── types/index.ts            # Shared TypeScript types
-prisma/
-├── schema.prisma             # Database schema
-└── seed.ts                   # Seed data
-```
+- Board management (create, edit, delete with custom colors)
+- Task management (create, edit, delete with status, priority, due date)
+- Kanban drag-and-drop (reorder tasks between To Do, In Progress, Done)
+- Analytics dashboard (task counts, completion percentage, priority chart)
+- Real-time updates (polling every 5 seconds across browser tabs)
+- Export data (download board data as JSON or CSV)
+- Responsive design (mobile-friendly with tabbed Kanban view)

@@ -1,77 +1,72 @@
-# AI Workflow Documentation
+# AI Workflow
 
 ## Tool Used
+I used **Claude Code** (Claude Opus 4.6) — Anthropic's CLI-based AI coding assistant and Cursor as an IDE. I ran it directly in my terminal and gave it prompts to generate code, debug issues, and handle deployment. I have also used Supabase MCP to design the schema and seed data.
 
-**Claude Code** (Claude Opus 4.6) — Anthropic's CLI-based AI coding assistant.
+## Example Prompts
 
-## Process
+### Prompt 1:
+> "Create Next.js App Router API endpoints for /api/boards with: GET all boards, POST create board, GET /api/boards/[id] to get board + all tasks, DELETE /api/boards/[id]. Return proper status codes and JSON responses. Add try/catch and input validation."
 
-### 1. Planning Phase
-- Reviewed the PRD document for requirements
-- Created a detailed implementation plan with 6 phases
-- Identified the tech stack: Next.js 14+ (App Router), React, TypeScript, SQLite, Prisma, Tailwind CSS
-- Planned file structure and API design upfront
+- **Why I wrote it this way**: I was specific about the routes, HTTP methods, and what each should return. Ive also defined error handling and validation
+- **Did the AI give a good answer?** Yes — it generated all 4 endpoints with proper 200/201/400/404/500 status codes, try/catch blocks, and input validation (e.g., checking board name is non-empty). I used the code as-is.
 
-### 2. Implementation Phase
+### Prompt 2:
+> "Instructions: Verify the app implements all required features first before considering optional features. Optional features should be implemented one at a time, not all. Ensure the routes and pages are correctly structured and match the specifications. Requirements: Analytics: Dashboard section showing: Total number of tasks across all boards, Number of tasks per status, Percentage of completed tasks. Real-Time Updates: Changes in one browser window appear automatically in another (via WebSockets or polling). Export Data: Button to download all board data as JSON or CSV. Pages and Routes: Homepage / Dashboard: / → Shows all boards. Board Detail: /board/[id] → Shows tasks for one board. API Routes: /api/boards → CRUD operations for boards, /api/tasks → CRUD operations for tasks."
 
-**Phase 1 — Project Setup & Database (scaffolding, Prisma schema, seed data)**
-- Scaffolded Next.js with `create-next-app`
-- Configured Prisma with SQLite, wrote Board and Task models
-- Created seed data with 2 sample boards and 9 tasks
-- Set up Prisma singleton for connection pooling
+- **Why I wrote it this way**: I have defined the UI/UX requirements. I was technical and detailed about how the system should work. I have ensured AI would understand my needs and i always make sure i make my prompt as detailed as possible as to not waste context. 
+- **Did the AI give a good answer?** It audited the codebase and identified exactly 3 missing features (completion percentage on dashboard, real-time updates, export). It implemented them one at a time without breaking existing functionality.
 
-**Phase 2 — API Routes (8 REST endpoints)**
-- Built CRUD endpoints for boards and tasks
-- Added input validation, proper HTTP status codes, and error handling
-- Used Prisma's cascade delete for board-task relationships
 
-**Phase 3 — Dashboard Page**
-- Built board listing with card grid layout
-- Created modal for board creation with color picker
-- Added delete confirmation dialog (reusable component)
-- Implemented empty state for no boards
 
-**Phase 4 — Board Detail Page (Kanban view)**
-- Built three-column Kanban layout (To Do, In Progress, Done)
-- Inline task creation form with priority selection
-- Edit task modal with all fields
-- Status change dropdown on each task card
-- Client-side filtering by status and sorting by multiple fields
-- Optimistic UI updates for status changes
+## My Process
 
-**Phase 5 — Analytics**
-- Dashboard banner with board count and total tasks
-- Board detail with per-status counts, progress bar, completion percentage
+### What I used AI for:
+- **Scaffolding**: Project setup, database schema, seed data, API routes
+- **Database migration**: Migrating from SQLite/Prisma to Supabase (PostgreSQL)
+- **Feature implementation**: Analytics dashboard, real-time polling, export (JSON/CSV), drag-and-drop
+- **Deployment**: Setting up Supabase MCP connection
+- **Debugging**: Fixing connection errors, environment variable issues, polling UI flicker
 
-**Phase 6 — Documentation**
-- README with setup instructions and API reference
-- This AI workflow document
-- Architecture documentation
+### What I coded manually:
+- Reviewed and approved all AI-generated code 
+- Configured Supabase project and environment variables
+- Set up Vercel deployment and environment variables in the dashboard
+- Tested all features in the browser
 
-### 3. Verification
-- Ran `next build` to verify zero compilation errors
-- Confirmed all routes render correctly
-- Tested database seeding
+### Where AI-generated code did not work:
+1. **Prisma + Vercel**: The initial SQLite + Prisma setup didn't work on Vercel because SQLite is file-based and serverless platforms don't support it. Had to migrate to Supabase.
+2. **Database connection**: Direct PostgreSQL connection (port 5432) was blocked by my network. Had to switch from Prisma to Supabase JS client which uses HTTPS instead.
+3. **Polling caused UI flicker**: The real-time polling (every 5 seconds) was showing unecessary ui updates. Fixed by adding a `silent` parameter to skip the loading state during background polls.
+4. **Export scope**: AI initially made the export buttons download ALL boards. I requested it to be per-board instead, and the AI corrected it.
 
-## Example Prompts Used
+### How I fixed problems:
+- For the SQLite issue: Switched to Supabase as a cloud database alternative and rewrote all API routes
+- For the connection issue: AI replaced Prisma with Supabase JS client (HTTPS-based, no port needed)
+- For the polling flicker: AI added a `silent` flag to fetch functions so background polls don't trigger loading states
 
-1. "Implement the following plan: [full implementation plan]"
-2. Planning phase included database schema design, API endpoint specification, and component hierarchy
 
 ## Time Management
 
-| Phase | Estimated | Description |
-|-------|-----------|-------------|
-| Phase 1 | 20 min | Project setup, Prisma, seed |
-| Phase 2 | 25 min | 8 API endpoints |
-| Phase 3 | 20 min | Dashboard + components |
-| Phase 4 | 30 min | Board detail + Kanban |
-| Phase 5 | 10 min | Analytics banner |
-| Phase 6 | 15 min | Documentation |
+### What I built first:
+1. Project setup, database schema, and seed data
+2. API routes (CRUD for boards and tasks)
+3. Dashboard page with board listing
+4. Board detail page with Kanban columns and drag-and-drop
+5. Analytics (task counts, priority chart, completion percentage)
+6. Database migration to Supabase for deployment
+7. Real-time updates and export feature
+8. Documentation
 
-## Key Decisions Made by AI
+### What I skipped:
+- WebSocket-based real-time (used polling instead — simpler and works everywhere)
+- User authentication
+- Full-text search across tasks
+- Labels/tags system
 
-1. **Prisma 6 over Prisma 7**: Chose Prisma 6 for stability and simpler ESM/CJS compatibility with tsx
-2. **Client-side filtering/sorting**: Used `useMemo` for filtering and sorting instead of additional API calls — faster UX for moderate task counts
-3. **Optimistic updates**: Status changes reflect immediately in UI before API confirmation
-4. **Reusable components**: `DeleteConfirmDialog` shared between board and task deletion
+### If I had more time, what would I add:
+- **Authentication**: User accounts so boards are private
+- **WebSocket real-time**: Replace polling with Supabase Realtime for instant updates
+- **Search**: Search bar to find tasks across all boards
+- **Labels/Tags**: Custom tags for better task categorization
+- **E2E tests**: Playwright tests for critical flows
