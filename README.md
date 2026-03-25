@@ -69,3 +69,4 @@ A Kanban-style task management application built with Next.js and Supabase.
 - Export data (download board data as JSON or CSV)
 - Responsive design (mobile-friendly with tabbed Kanban view)
 # Test PR
+
