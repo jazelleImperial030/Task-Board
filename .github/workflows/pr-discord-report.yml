@@ -1,0 +1,112 @@
+name: PR Merge Discord Report
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  report:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DIFF=$(gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }} | head -c 12000)
+          echo "diff<<EOFMARKER" >> $GITHUB_OUTPUT
+          echo "$DIFF" >> $GITHUB_OUTPUT
+          echo "EOFMARKER" >> $GITHUB_OUTPUT
+
+      - name: Summarize with AI via OpenRouter
+        id: summary
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY=$(cat <<'BODYEOF'
+          ${{ github.event.pull_request.body }}
+          BODYEOF
+          )
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          PROMPT="You are a concise PR reporter for a Discord channel. Given the following pull request details and code diff, write a short human-readable summary (2-4 sentences max) of ONLY the behavioral changes — what changed from the user's perspective. Do not mention file names, function names, or technical implementation details. Write as if explaining to a non-technical team member.
+
+          PR Title: $PR_TITLE
+          PR Description: $PR_BODY
+
+          Code Diff:
+          ${{ steps.diff.outputs.diff }}"
+
+          # Escape the prompt for JSON
+          ESCAPED_PROMPT=$(echo "$PROMPT" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")
+
+          RESPONSE=$(curl -s https://openrouter.ai/api/v1/chat/completions \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"model\": \"openrouter/auto\",
+              \"messages\": [{\"role\": \"user\", \"content\": $ESCAPED_PROMPT}],
+              \"max_tokens\": 300
+            }")
+
+          SUMMARY=$(echo "$RESPONSE" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data['choices'][0]['message']['content'])" 2>/dev/null)
+
+          if [ -z "$SUMMARY" ]; then
+            SUMMARY="A PR was merged: $PR_TITLE"
+            echo "::warning::AI summarization failed, using fallback. Response: $RESPONSE"
+          fi
+
+          echo "summary<<EOFMARKER" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOFMARKER" >> $GITHUB_OUTPUT
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "pr_author=$PR_AUTHOR" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "pr_title<<EOFTITLE" >> $GITHUB_OUTPUT
+          echo "$PR_TITLE" >> $GITHUB_OUTPUT
+          echo "EOFTITLE" >> $GITHUB_OUTPUT
+
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          SUMMARY='${{ steps.summary.outputs.summary }}'
+          PR_URL='${{ steps.summary.outputs.pr_url }}'
+          PR_AUTHOR='${{ steps.summary.outputs.pr_author }}'
+          PR_TITLE='${{ steps.summary.outputs.pr_title }}'
+          PR_NUMBER='${{ steps.summary.outputs.pr_number }}'
+
+          # Build Discord embed payload
+          PAYLOAD=$(python3 -c "
+          import json
+          payload = {
+              'embeds': [{
+                  'title': f'PR #{\"$PR_NUMBER\"} Merged',
+                  'url': '$PR_URL',
+                  'description': '''$SUMMARY'''.strip(),
+                  'color': 5763719,
+                  'fields': [
+                      {'name': 'PR Title', 'value': '''$PR_TITLE''', 'inline': True},
+                      {'name': 'Author', 'value': '$PR_AUTHOR', 'inline': True}
+                  ],
+                  'footer': {'text': 'UTAK PR Reporter'}
+              }]
+          }
+          print(json.dumps(payload))
+          ")
+
+          curl -s -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "$DISCORD_WEBHOOK_URL"
+
+          echo "✅ Discord notification sent"
