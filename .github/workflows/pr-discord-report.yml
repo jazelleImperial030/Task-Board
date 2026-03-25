@@ -91,7 +91,10 @@ jobs:
           req = urllib.request.Request(
               discord_url,
               data=discord_payload,
-              headers={"Content-Type": "application/json"}
+              headers={
+                  "Content-Type": "application/json",
+                  "User-Agent": "UTAK-PR-Reporter/1.0"
+              }
           )
           try:
               with urllib.request.urlopen(req) as resp:
