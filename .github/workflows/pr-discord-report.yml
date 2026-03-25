@@ -82,27 +82,23 @@ jobs:
           except Exception as e:
               print(f"::warning::AI summarization failed: {e}, using fallback")
 
-          # Post to Discord
-          discord_payload = json.dumps({
-              "embeds": [{
-                  "title": f"PR #{pr_number} Merged",
-                  "url": pr_url,
-                  "description": summary.strip(),
-                  "color": 5763719,
-                  "fields": [
-                      {"name": "PR Title", "value": pr_title, "inline": True},
-                      {"name": "Author", "value": pr_author, "inline": True}
-                  ],
-                  "footer": {"text": "UTAK PR Reporter"}
-              }]
-          }).encode()
+          # Post to Discord — use simple content instead of embed to avoid formatting issues
+          clean_summary = summary.strip()[:1900]
+          message = f"**PR #{pr_number} Merged** — _{pr_title}_\n**Author:** {pr_author}\n\n{clean_summary}\n\n🔗 {pr_url}"
+
+          discord_payload = json.dumps({"content": message}).encode()
 
           req = urllib.request.Request(
               discord_url,
               data=discord_payload,
               headers={"Content-Type": "application/json"}
           )
-          with urllib.request.urlopen(req) as resp:
-              print(f"Discord response: {resp.status}")
-              print("Discord notification sent!")
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  print(f"Discord response: {resp.status}")
+                  print("Discord notification sent!")
+          except urllib.error.HTTPError as e:
+              error_body = e.read().decode()
+              print(f"Discord error {e.code}: {error_body}")
+              raise
           PYEOF
