@@ -84,7 +84,7 @@ jobs:
 
           # Post to Discord — use simple content instead of embed to avoid formatting issues
           clean_summary = summary.strip()[:1900]
-          message = f"**PR #{pr_number} Merged** — _{pr_title}_\n**Author:** {pr_author}\n\n{clean_summary}\n\n🔗 {pr_url}"
+          message = f"**PR #{pr_number} Merged by {pr_author}**\n\n{clean_summary}"
 
           discord_payload = json.dumps({"content": message}).encode()
 
