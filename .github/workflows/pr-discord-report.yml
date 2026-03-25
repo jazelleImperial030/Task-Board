@@ -18,95 +18,91 @@ jobs:
         id: diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
         run: |
-          DIFF=$(gh pr diff ${{ github.event.pull_request.number }} --repo ${{ github.repository }} | head -c 12000)
+          DIFF=$(gh pr diff "$PR_NUMBER" --repo "$REPO" | head -c 12000 || echo "Could not fetch diff")
           echo "diff<<EOFMARKER" >> $GITHUB_OUTPUT
           echo "$DIFF" >> $GITHUB_OUTPUT
           echo "EOFMARKER" >> $GITHUB_OUTPUT
 
-      - name: Summarize with AI via OpenRouter
-        id: summary
+      - name: Summarize and post to Discord
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_DIFF: ${{ steps.diff.outputs.diff }}
         run: |
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_BODY=$(cat <<'BODYEOF'
-          ${{ github.event.pull_request.body }}
-          BODYEOF
-          )
-          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-          PR_URL="${{ github.event.pull_request.html_url }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
+          python3 << 'PYEOF'
+          import os, json, urllib.request
 
-          PROMPT="You are a concise PR reporter for a Discord channel. Given the following pull request details and code diff, write a short human-readable summary (2-4 sentences max) of ONLY the behavioral changes — what changed from the user's perspective. Do not mention file names, function names, or technical implementation details. Write as if explaining to a non-technical team member.
+          pr_title = os.environ.get("PR_TITLE", "")
+          pr_body = os.environ.get("PR_BODY", "") or ""
+          pr_author = os.environ.get("PR_AUTHOR", "")
+          pr_url = os.environ.get("PR_URL", "")
+          pr_number = os.environ.get("PR_NUMBER", "")
+          pr_diff = os.environ.get("PR_DIFF", "")
+          openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
+          discord_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
-          PR Title: $PR_TITLE
-          PR Description: $PR_BODY
+          # Build AI prompt
+          prompt = f"""You are a concise PR reporter for a Discord channel. Given the following pull request details and code diff, write a short human-readable summary (2-4 sentences max) of ONLY the behavioral changes — what changed from the user's perspective. Do not mention file names, function names, or technical implementation details. Write as if explaining to a non-technical team member.
+
+          PR Title: {pr_title}
+          PR Description: {pr_body}
 
           Code Diff:
-          ${{ steps.diff.outputs.diff }}"
+          {pr_diff[:10000]}"""
 
-          # Escape the prompt for JSON
-          ESCAPED_PROMPT=$(echo "$PROMPT" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")
+          # Call OpenRouter
+          summary = f"A PR was merged: {pr_title}"
+          try:
+              payload = json.dumps({
+                  "model": "openrouter/auto",
+                  "messages": [{"role": "user", "content": prompt}],
+                  "max_tokens": 300
+              }).encode()
 
-          RESPONSE=$(curl -s https://openrouter.ai/api/v1/chat/completions \
-            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"model\": \"openrouter/auto\",
-              \"messages\": [{\"role\": \"user\", \"content\": $ESCAPED_PROMPT}],
-              \"max_tokens\": 300
-            }")
+              req = urllib.request.Request(
+                  "https://openrouter.ai/api/v1/chat/completions",
+                  data=payload,
+                  headers={
+                      "Authorization": f"Bearer {openrouter_key}",
+                      "Content-Type": "application/json"
+                  }
+              )
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  data = json.loads(resp.read())
+                  summary = data["choices"][0]["message"]["content"]
+                  print(f"AI Summary: {summary}")
+          except Exception as e:
+              print(f"::warning::AI summarization failed: {e}, using fallback")
 
-          SUMMARY=$(echo "$RESPONSE" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data['choices'][0]['message']['content'])" 2>/dev/null)
-
-          if [ -z "$SUMMARY" ]; then
-            SUMMARY="A PR was merged: $PR_TITLE"
-            echo "::warning::AI summarization failed, using fallback. Response: $RESPONSE"
-          fi
-
-          echo "summary<<EOFMARKER" >> $GITHUB_OUTPUT
-          echo "$SUMMARY" >> $GITHUB_OUTPUT
-          echo "EOFMARKER" >> $GITHUB_OUTPUT
-
-          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
-          echo "pr_author=$PR_AUTHOR" >> $GITHUB_OUTPUT
-          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          echo "pr_title<<EOFTITLE" >> $GITHUB_OUTPUT
-          echo "$PR_TITLE" >> $GITHUB_OUTPUT
-          echo "EOFTITLE" >> $GITHUB_OUTPUT
-
-      - name: Post to Discord
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          SUMMARY='${{ steps.summary.outputs.summary }}'
-          PR_URL='${{ steps.summary.outputs.pr_url }}'
-          PR_AUTHOR='${{ steps.summary.outputs.pr_author }}'
-          PR_TITLE='${{ steps.summary.outputs.pr_title }}'
-          PR_NUMBER='${{ steps.summary.outputs.pr_number }}'
-
-          # Build Discord embed payload
-          PAYLOAD=$(python3 -c "
-          import json
-          payload = {
-              'embeds': [{
-                  'title': f'PR #{\"$PR_NUMBER\"} Merged',
-                  'url': '$PR_URL',
-                  'description': '''$SUMMARY'''.strip(),
-                  'color': 5763719,
-                  'fields': [
-                      {'name': 'PR Title', 'value': '''$PR_TITLE''', 'inline': True},
-                      {'name': 'Author', 'value': '$PR_AUTHOR', 'inline': True}
+          # Post to Discord
+          discord_payload = json.dumps({
+              "embeds": [{
+                  "title": f"PR #{pr_number} Merged",
+                  "url": pr_url,
+                  "description": summary.strip(),
+                  "color": 5763719,
+                  "fields": [
+                      {"name": "PR Title", "value": pr_title, "inline": True},
+                      {"name": "Author", "value": pr_author, "inline": True}
                   ],
-                  'footer': {'text': 'UTAK PR Reporter'}
+                  "footer": {"text": "UTAK PR Reporter"}
               }]
-          }
-          print(json.dumps(payload))
-          ")
+          }).encode()
 
-          curl -s -H "Content-Type: application/json" \
-            -d "$PAYLOAD" \
-            "$DISCORD_WEBHOOK_URL"
-
-          echo "✅ Discord notification sent"
+          req = urllib.request.Request(
+              discord_url,
+              data=discord_payload,
+              headers={"Content-Type": "application/json"}
+          )
+          with urllib.request.urlopen(req) as resp:
+              print(f"Discord response: {resp.status}")
+              print("Discord notification sent!")
+          PYEOF
