@@ -68,3 +68,4 @@ A Kanban-style task management application built with Next.js and Supabase.
 - Real-time updates (polling every 5 seconds across browser tabs)
 - Export data (download board data as JSON or CSV)
 - Responsive design (mobile-friendly with tabbed Kanban view)
+# Test PR
