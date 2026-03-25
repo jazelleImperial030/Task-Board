@@ -35,6 +35,7 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
           PR_DIFF: ${{ steps.diff.outputs.diff }}
         run: |
           python3 << 'PYEOF'
@@ -45,12 +46,13 @@ jobs:
           pr_author = os.environ.get("PR_AUTHOR", "")
           pr_url = os.environ.get("PR_URL", "")
           pr_number = os.environ.get("PR_NUMBER", "")
+          pr_branch = os.environ.get("PR_BRANCH", "")
           pr_diff = os.environ.get("PR_DIFF", "")
           openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
           discord_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
           # Build AI prompt
-          prompt = f"""You are a concise PR reporter for a Discord channel. Given the following pull request details and code diff, write a short human-readable summary (2-4 sentences max) of ONLY the behavioral changes — what changed from the user's perspective. Do not mention file names, function names, or technical implementation details. Write as if explaining to a non-technical team member.
+          prompt = f"""You are a concise PR reporter for a Discord channel. Given the following pull request details and code diff, write a short human-readable summary (2 sentences max) of ONLY the behavioral changes — what changed from the user's perspective. Do not mention file names, function names, or technical implementation details. Write as if explaining to a non-technical team member.
 
           PR Title: {pr_title}
           PR Description: {pr_body}
@@ -84,7 +86,7 @@ jobs:
 
           # Post to Discord — use simple content instead of embed to avoid formatting issues
           clean_summary = summary.strip()[:1900]
-          message = f"**PR #{pr_number} Merged by {pr_author}**\n\n{clean_summary}"
+          message = f"**PR #{pr_number} Merged by {pr_author}**\n**Branch:** {pr_branch}\n**Created by:** {pr_author}\n\n{clean_summary}"
 
           discord_payload = json.dumps({"content": message}).encode()
 
