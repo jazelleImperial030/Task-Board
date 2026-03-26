@@ -803,3 +803,4 @@ function EditableText({
     </span>
   );
 }
+// fix timezone offset check for cashdrawer alert
