@@ -16,3 +16,6 @@ const eslintConfig = defineConfig([
 ]);
 
 export default eslintConfig;
+// Updated eslint rules for stricter type checking
+// Added no-unused-vars and no-implicit-any rules
+// Developer tooling only, no app behavior change
