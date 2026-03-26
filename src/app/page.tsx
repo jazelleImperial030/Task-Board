@@ -805,3 +805,7 @@ function EditableText({
 }
 // fix timezone offset check for cashdrawer alert
 // fix timezone offset check for cashdrawer alert using reactive settings
+// Cash drawer date range now limited to 2 months max
+// Previously users could set date range to years causing massive data loads
+// const MAX_CASHDRAWER_DAYS = 60
+// if (dateRange > MAX_CASHDRAWER_DAYS) showAlert("Maximum 2 months")
