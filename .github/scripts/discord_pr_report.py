@@ -118,18 +118,21 @@ if evaluation.strip().upper().startswith("SKIP"):
 summary_prompt = (
     SYSTEM_CONTEXT + "\n\n"
     "A pull request was just merged. Write a message for the team Discord channel "
-    "explaining what changed and how it affects operations. Write naturally like a "
-    "team member giving an update - not like a bot or a changelog.\n\n"
+    "explaining what changed and how it affects operations.\n\n"
     "Guidelines:\n"
-    "- 3-5 sentences, conversational tone\n"
+    "- Start with 'Hi everyone,' or 'Hello everyone,'\n"
+    "- 3-5 sentences, professional but friendly tone\n"
     "- Explain the behavioral change and WHY it matters\n"
     "- Mention which part of the system is affected (POS, Back Office, cloud functions, etc.)\n"
     "- If it is a bugfix, explain what was going wrong and how it is fixed now\n"
     "- If it is a new feature or restriction, explain what users will notice\n"
     "- Always complete your sentences\n"
+    "- Do NOT mention any developer names or who merged it. Use 'the tech team' instead\n"
+    "- Do NOT use em dashes (--). Use commas instead\n"
+    "- Do NOT add informal or casual remarks like 'feel free to poke at it' or 'now is a good time'\n"
     "- Do not mention file names, function names, variable names, or any code details\n"
     "- Do not use bullet points or markdown formatting\n"
-    "- Write as plain text, like you are talking to the team on Discord\n\n"
+    "- Write as plain text, professional and clear\n\n"
     "PR Title: " + pr_title + "\n"
     "PR Description: " + pr_body + "\n"
     "Branch: " + pr_branch + "\n"
@@ -146,12 +149,10 @@ except Exception as e:
 
 # Post to Discord
 clean_summary = summary.strip()[:1900]
-separator = "\u2014" * 57
 message = (
-    separator + "\n"
     "PR #" + pr_number + " Merged by " + pr_author + "\n"
-    "Branch: **" + pr_branch + "**  Created by: " + pr_author + "\n"
-    "Summary: " + clean_summary
+    "Branch: **" + pr_branch + "**  Created by: " + pr_author + "\n\n"
+    + clean_summary
 )
 
 discord_payload = json.dumps({"content": message}).encode()
