@@ -28,9 +28,11 @@ export function CashDrawerScreen({ storeId, settings }) {
   }
 
   function getTimezoneAlert() {
-    const deviceTimezone = new Date().getTimezoneOffset();
-    if (deviceTimezone !== 0) {
-      return 'Warning: Your device timezone may not match store timezone';
+    const deviceOffsetMinutes = new Date().getTimezoneOffset();
+    const storeOffsetMinutes = settings?.timezoneOffset ?? 0;
+    const offsetDifference = Math.abs(deviceOffsetMinutes - storeOffsetMinutes);
+    if (offsetDifference > 30) {
+      return `Warning: Your device timezone (UTC${deviceOffsetMinutes >= 0 ? '-' : '+'}${Math.abs(deviceOffsetMinutes / 60)}) does not match the store timezone. Cash drawer totals may show incorrect dates.`;
     }
     return null;
   }
