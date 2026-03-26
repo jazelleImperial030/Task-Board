@@ -27,3 +27,6 @@
     "typescript": "^5"
   }
 }
+// Fix: items modal now locks to portrait on tablets
+// Previously the modal would rotate and break layout when cashier tilted device
+// Affects all tablet POS users during item selection
