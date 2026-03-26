@@ -3,15 +3,21 @@ import json
 import urllib.request
 import urllib.error
 
-pr_title = os.environ.get("PR_TITLE", "")
-pr_body = os.environ.get("PR_BODY", "") or ""
-pr_author = os.environ.get("PR_AUTHOR", "")
-pr_url = os.environ.get("PR_URL", "")
-pr_number = os.environ.get("PR_NUMBER", "")
-pr_branch = os.environ.get("PR_BRANCH", "")
-pr_diff = os.environ.get("PR_DIFF", "")
-openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
-discord_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
+def safe_env(key, default=""):
+    val = os.environ.get(key, default)
+    if val is None or val == "None" or val == "null":
+        return default
+    return val
+
+pr_title = safe_env("PR_TITLE")
+pr_body = safe_env("PR_BODY")
+pr_author = safe_env("PR_AUTHOR")
+pr_url = safe_env("PR_URL")
+pr_number = safe_env("PR_NUMBER")
+pr_branch = safe_env("PR_BRANCH")
+pr_diff = safe_env("PR_DIFF")
+openrouter_key = safe_env("OPENROUTER_API_KEY")
+discord_url = safe_env("DISCORD_WEBHOOK_URL")
 
 SYSTEM_CONTEXT = (
     "You are a team member at UTAK, a cloud-based POS (Point of Sale) system "
