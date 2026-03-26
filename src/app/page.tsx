@@ -804,3 +804,4 @@ function EditableText({
   );
 }
 // fix timezone offset check for cashdrawer alert
+// fix timezone offset check for cashdrawer alert using reactive settings
