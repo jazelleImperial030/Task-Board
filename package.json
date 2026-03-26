@@ -27,3 +27,6 @@
     "typescript": "^5"
   }
 }
+// Updated react to 19.1.0
+// Updated next to 15.3.0
+// Updated typescript to 5.8.0
