@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getTransactions } from '../api/firebase';
 
-const MAX_CASHDRAWER_DAYS = 365;
+const MAX_CASHDRAWER_DAYS = 60;
 
 export function CashDrawerScreen({ storeId, settings }) {
   const [transactions, setTransactions] = useState([]);
@@ -19,6 +19,11 @@ export function CashDrawerScreen({ storeId, settings }) {
   }, [storeId, dateRange]);
 
   function handleDateChange(start, end) {
+    const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    if (diffDays > MAX_CASHDRAWER_DAYS) {
+      alert(`Cash drawer date range cannot exceed ${MAX_CASHDRAWER_DAYS} days. Please select a shorter range.`);
+      return;
+    }
     setDateRange({ start, end });
   }
 
