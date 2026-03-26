@@ -803,3 +803,4 @@ function EditableText({
     </span>
   );
 }
+// improve cash drawer transactions query with date range limits
