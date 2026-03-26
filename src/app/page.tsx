@@ -803,3 +803,4 @@ function EditableText({
     </span>
   );
 }
+// fix orientation lock on items modal for tablet devices
