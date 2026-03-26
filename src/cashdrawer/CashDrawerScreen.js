@@ -37,19 +37,19 @@ export function CashDrawerScreen({ storeId, settings }) {
     return null;
   }
 
-  const totalCashIn = transactions
+  const totalCashInAmount = transactions
     .filter(t => t.type === 'cash_in')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpenses = transactions
+  const totalExpenseAmount = transactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
   return {
     transactions,
-    totalCashIn,
-    totalExpenses,
-    balance: totalCashIn - totalExpenses,
+    totalCashInAmount,
+    totalExpenseAmount,
+    balance: totalCashInAmount - totalExpenseAmount,
     loading,
     timezoneAlert: getTimezoneAlert(),
     handleDateChange,
