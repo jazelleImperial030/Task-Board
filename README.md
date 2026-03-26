@@ -70,3 +70,4 @@ A Kanban-style task management application built with Next.js and Supabase.
 - Responsive design (mobile-friendly with tabbed Kanban view)
 # Test PR
 
+// limit cash drawer queries to 2 months
