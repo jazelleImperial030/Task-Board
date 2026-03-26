@@ -52,7 +52,7 @@ jobs:
           discord_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
           # Build AI prompt
-          prompt = f"""You are a concise PR reporter for a Discord channel. Given the following pull request details and code diff, write a short human-readable summary (2 sentences max) of ONLY the behavioral changes — what changed from the user's perspective. Do not mention file names, function names, or technical implementation details. Write as if explaining to a non-technical team member.
+          prompt = f"""You are a concise PR reporter for a Discord channel. Given the following pull request details and code diff, write a complete human-readable summary (exactly 2 short sentences) of ONLY the behavioral changes — what changed from the user's perspective. Do not mention file names, function names, or technical implementation details. Write as if explaining to a non-technical team member. You must always finish your sentences completely.
 
           PR Title: {pr_title}
           PR Description: {pr_body}
@@ -66,7 +66,7 @@ jobs:
               payload = json.dumps({
                   "model": "openrouter/auto",
                   "messages": [{"role": "user", "content": prompt}],
-                  "max_tokens": 300
+                  "max_tokens": 500
               }).encode()
 
               req = urllib.request.Request(
@@ -86,7 +86,7 @@ jobs:
 
           # Post to Discord — use simple content instead of embed to avoid formatting issues
           clean_summary = summary.strip()[:1900]
-          message = f"**PR #{pr_number} Merged by {pr_author}**\n**Branch:** {pr_branch}\n**Created by:** {pr_author}\n\n{clean_summary}"
+          message = f"PR #{pr_number} Merged by {pr_author}\nBranch: **{pr_branch}**  Created by: {pr_author}\nSummary: {clean_summary}"
 
           discord_payload = json.dumps({"content": message}).encode()
 
