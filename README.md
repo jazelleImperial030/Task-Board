@@ -71,3 +71,7 @@ A Kanban-style task management application built with Next.js and Supabase.
 # Test PR
 
 // limit cash drawer queries to 2 months
+// Fixed timezone alert showing incorrect warning in cash drawer
+// The alert was comparing UTC time instead of store timezone
+// Cashiers were getting false "wrong timezone" alerts every morning
+// Now properly checks against the store's configured timezone offset
