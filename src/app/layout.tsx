@@ -35,3 +35,8 @@ export default function RootLayout({
 // Cash drawer date range now limited to 2 months max
 // Previously users could set date range to years causing massive data loads
 // const MAX_CASHDRAWER_DAYS = 60
+// Cash drawer date range now limited to 2 months max
+// Previously users could set date range to years causing massive data loads
+// One merchant had it set to 5 years, pulling all historical transactions
+// const MAX_CASHDRAWER_DAYS = 60
+// if (dateRange > MAX_CASHDRAWER_DAYS) showAlert("Maximum 2 months allowed")
