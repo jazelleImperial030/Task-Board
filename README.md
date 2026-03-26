@@ -75,3 +75,18 @@ A Kanban-style task management application built with Next.js and Supabase.
 // The alert was comparing UTC time instead of store timezone
 // Cashiers were getting false "wrong timezone" alerts every morning
 // Now properly checks against the store's configured timezone offset
+
+## Development Setup
+
+### Prerequisites
+- Node.js 20+
+- npm or yarn
+
+### Installation
+1. Clone the repository
+2. Run `npm install`
+3. Run `npm run dev`
+
+### Environment Variables
+- `FIREBASE_API_KEY` - Firebase project API key
+- `FIREBASE_PROJECT_ID` - Firebase project ID
