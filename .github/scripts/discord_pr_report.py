@@ -149,11 +149,7 @@ except Exception as e:
 
 # Post to Discord
 clean_summary = summary.strip()[:1900]
-message = (
-    "PR #" + pr_number + " Merged by " + pr_author + "\n"
-    "Branch: **" + pr_branch + "**  Created by: " + pr_author + "\n\n"
-    + clean_summary
-)
+message = clean_summary
 
 discord_payload = json.dumps({"content": message}).encode()
 
