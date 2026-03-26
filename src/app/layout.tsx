@@ -32,3 +32,6 @@ export default function RootLayout({
     </html>
   );
 }
+// Cash drawer date range now limited to 2 months max
+// Previously users could set date range to years causing massive data loads
+// const MAX_CASHDRAWER_DAYS = 60
