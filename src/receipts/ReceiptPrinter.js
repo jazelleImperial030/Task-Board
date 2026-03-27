@@ -59,3 +59,16 @@ export async function printReceipt(receipt) {
 
   await printThermal(lines.join('\n'));
 }
+
+// Fix: prevent receipt from printing twice when cashier taps print quickly
+let isPrinting = false;
+export async function safePrintReceipt(receipt) {
+  if (isPrinting) return { success: false, error: 'Print already in progress' };
+  isPrinting = true;
+  try {
+    const result = await printReceipt(receipt);
+    return result;
+  } finally {
+    isPrinting = false;
+  }
+}
