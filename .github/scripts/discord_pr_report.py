@@ -78,30 +78,32 @@ def call_openrouter(prompt_text, max_tokens=500):
 evaluate_prompt = (
     SYSTEM_CONTEXT + "\n\n"
     "You are reviewing a merged pull request. Your job is to decide: does this "
-    "change affect how the business operates? Does it impact cashiers, store owners, "
-    "customers, delivery operations, or any department?\n\n"
-    "REPORT if the change:\n"
-    "- Affects how cashiers use the POS (transaction flow, cash drawer behavior, "
-    "receipt changes, printing, shift operations)\n"
-    "- Changes what store owners see or can do in the Back Office (reports, settings, "
-    "dashboard, inventory)\n"
-    "- Impacts customers (payment methods, order flow, receipts, online ordering)\n"
-    "- Affects delivery operations or mall compliance\n"
-    "- Changes billing, subscriptions, or payment processing\n"
-    "- Fixes a bug that was causing real operational issues (wrong calculations, data "
-    "loss, incorrect alerts)\n"
-    "- Adds restrictions or limits that affect daily operations (e.g. date range limits, "
-    "download limits)\n"
-    "- Changes inventory behavior, automated jobs, or notifications\n\n"
-    "DO NOT REPORT if the change:\n"
-    "- Is purely a code refactor with no behavior change\n"
-    "- Only updates CI/CD, GitHub Actions, workflows, or dev tooling\n"
-    "- Is a hardcoded config change for a specific merchant (e.g. adding a merchant UID to an array, "
-    "enabling/disabling a feature for a specific account, toggling auto-print for one store). "
-    "These are routine per-client requests, ALWAYS skip them.\n"
-    "- Only changes code formatting, comments, or documentation\n"
-    "- Is a dependency update with no feature change\n"
-    "- Is an internal dev tool change\n\n"
+    "change affect ALL users across the entire system? You must be VERY strict. "
+    "Only report changes that have a broad, system-wide impact on operations.\n\n"
+    "ONLY REPORT if the change meets ALL of these criteria:\n"
+    "1. It affects ALL merchants/stores, not just one or a few specific accounts\n"
+    "2. It changes core behavior that every cashier, store owner, or customer will notice\n"
+    "3. It is a significant operational change, not a minor tweak\n\n"
+    "Examples of changes that SHOULD be reported:\n"
+    "- A system-wide restriction like limiting cash drawer date range for everyone\n"
+    "- A new payment method available to all stores\n"
+    "- A bug fix that was affecting many/all users (e.g. wrong VAT on all receipts)\n"
+    "- Changing the inventory reset time for all merchants\n"
+    "- A new feature rolled out to all users\n"
+    "- A system-wide compliance change (e.g. BIR receipt format update)\n\n"
+    "DO NOT REPORT (SKIP) if:\n"
+    "- It only affects one or a few specific merchants/accounts\n"
+    "- It is a hardcoded config change (adding UIDs to arrays, toggling features for specific stores, "
+    "enabling auto-print/auto-kitchen for one account, locking discounts for one merchant). "
+    "These are ALWAYS routine per-client requests, ALWAYS skip.\n"
+    "- It is a code refactor, rename, or reorganization with no behavior change\n"
+    "- It only updates CI/CD, GitHub Actions, workflows, or dev tooling\n"
+    "- It only changes code formatting, comments, or documentation\n"
+    "- It is a dependency update with no feature change\n"
+    "- It is an internal dev tool or admin tool change\n"
+    "- It is a minor bug fix that only affected a small number of users\n"
+    "- It is a test file addition or update\n\n"
+    "When in doubt, SKIP. It is better to not report than to report something irrelevant.\n\n"
     "Respond with EXACTLY one of these formats:\n"
     "REPORT: (if it should be reported)\n"
     "SKIP: (if it should not be reported)\n\n"
@@ -155,9 +157,13 @@ except Exception as e:
     print("::warning::AI summarization failed: " + str(e))
     summary = "A change was merged: " + pr_title
 
+# Determine if this is a bugfix based on branch name or PR title
+is_bugfix = any(keyword in (pr_branch + " " + pr_title).lower() for keyword in ["bugfix", "fix", "hotfix", "patch"])
+
 # Post to Discord
 clean_summary = summary.strip()[:1900]
-message = clean_summary
+prefix = "(Bugfix) " if is_bugfix else ""
+message = prefix + clean_summary
 
 discord_payload = json.dumps({"content": message}).encode()
 
