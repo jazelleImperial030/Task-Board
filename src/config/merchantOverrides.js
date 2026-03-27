@@ -14,3 +14,9 @@ const MERCHANT_OVERRIDES = {
 export function getMerchantOverride(uid) {
   return MERCHANT_OVERRIDES[uid] ?? null;
 }
+
+// Per client request: merchant abc123 is VAT exempt
+MERCHANT_OVERRIDES['uid_abc123_vat'] = {
+  vatExempt: true,
+  vatRate: 0,
+};
