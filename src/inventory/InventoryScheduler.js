@@ -35,3 +35,17 @@ export function getNextResetTime(inventoryType) {
   }
   return next;
 }
+
+// Send push notification to merchant when item stock falls below reorder level
+export async function checkLowStock(storeId, items) {
+  const lowStockItems = items.filter(item => item.quantity <= item.reorderLevel);
+  if (lowStockItems.length > 0) {
+    const itemNames = lowStockItems.map(i => i.name).join(', ');
+    await sendPushNotification(storeId, {
+      title: 'Low Stock Alert',
+      body: 'The following items are running low: ' + itemNames + '. Please restock soon.',
+      type: 'low_stock',
+    });
+  }
+  return lowStockItems;
+}
